@@ -1,0 +1,204 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <title>Document</title>
+    <style>
+        
+    </style>
+</head>
+
+
+
+
+
+
+
+
+
+<body>
+
+
+
+    <li>
+      <a href=""><span id="numeropage" class="visuallyhidden">page </span></a>
+    </li>
+
+
+
+<nav aria-label="pagination">
+  <ul id = "pagination" class="pagination">
+   <li>
+      <a href="">
+        <span aria-hidden="true">&laquo;</span>
+        <span class="visuallyhidden">ensemble de pages précédent</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+<button id = "precedent">precedent</button>
+<button id = "suivant">suivant</button>
+
+
+
+
+    <div id = "grille"></div>
+</body>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+    .then(function(registration) {
+        console.log('Service Worker enregistré avec le scope :', registration.scope);
+    })
+    .catch(function(error) {
+        console.error('Échec de l\'enregistrement du Service Worker :', error);
+    });
+}
+
+
+var compteur = 1;
+let globalData = [];
+var grille = document.getElementById("grille")
+const precedent = document.getElementById("precedent");
+const suivant = document.getElementById("suivant");
+const numeropage = document.getElementById("numeropage");
+numeropage.innerHTML = "page " + compteur;
+suivant.addEventListener("click", function(){
+    compteur++;
+    numeropage.innerHTML = "page " + compteur;
+    console.log(compteur);
+    faireunfetch();
+    
+});
+precedent.addEventListener("click", function(){
+    if (compteur>1){
+    compteur--;
+    numeropage.innerHTML = "page " + compteur;
+    }
+    faireunfetch();
+});
+
+
+
+
+
+   
+
+function faireunfetch(){
+
+    grille.innerHTML = '';
+
+    fetch("https://punkapi.online/v3/beers?page=" + compteur)
+    .then(response => response.json())
+    .then(datajson => {
+       globalData = datajson;   // ⬅️ ICI : donnée stockée globalement
+        console.log("GLOBAL DATA : ", globalData);
+        for (let j = 0; j < datajson.length; j++) {
+            const div = document.createElement("div");
+            div.classList.add("carte");
+            let img = document.createElement("img");
+            img.setAttribute("src", "https://punkapi.online/v3/images/" + datajson[j].image);
+            img.setAttribute("alt", datajson[j].name);
+            div.appendChild(img);
+            div.innerHTML += datajson[j].name + " " + datajson[j].id;
+            grille.appendChild(div);
+        }
+
+        // Enregistrer les données récupérées dans IndexedDB (si la DB est ouverte)
+        if (db) insertData(globalData);
+    })
+}
+faireunfetch();
+ 
+
+// IndexedDB setup
+const request = indexedDB.open("biereDB", 2);
+
+request.onupgradeneeded = function(event) {
+    const db = event.target.result;
+    if (!db.objectStoreNames.contains("beers")) {
+        db.createObjectStore("beers", { keyPath: "id" });
+    }
+};
+
+request.onsuccess = function(event) {
+    db = event.target.result;  //  stocker db globalement
+    console.log("DB prête");
+
+   
+    if (globalData.length > 0) insertData(globalData);
+};
+
+request.onerror = function() {
+    console.error("Erreur lors de l'ouverture de la DB");
+};
+
+
+
+function insertData(dataArray) {
+    const transaction = db.transaction(["beers"], "readwrite");
+    const store = transaction.objectStore("beers");
+
+    dataArray.forEach(element => {
+        const addRequest = store.put(element);
+        addRequest.onsuccess = () => console.log("Ajouté :", element);
+        addRequest.onerror = () => console.error("Erreur ");
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* request.onsuccess = function(event) {
+    db = event.target.result;
+    console.log("Database opened successfully");
+
+    // Lire les données après ouverture de la base
+    try {
+        const transaction = db.transaction(["beers"], "readonly");
+        const objectStore = transaction.objectStore("beers");
+        const readRequest = objectStore.getAll();
+
+        readRequest.onsuccess = () =>{
+            const results = readRequest.result;
+            console.log("Donnée lue avec succes",results);
+        }
+
+        readRequest.onerror = () =>{
+            console.error("Erreur lors de la lecture des données");
+        }
+    } catch (err) {
+        console.warn('Impossible de lire l\'objectStore "beers" :', err);
+    }
+};
+
+request.onerror = function(event) {
+    console.error("Database error: " + event.target.errorCode);
+}; */
+
+
+
+
+    
+
+
+ 
+</script>
+</html>
+
+
+                
